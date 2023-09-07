@@ -1,0 +1,9 @@
+base_repo: https://github.com/EspenAlbert/py-libs
+repo_url: https://github.com/EspenAlbert/bash-runner
+version: "0.0.1"
+development_status: Alpha
+python_versions:
+  - "3.11"
+skip_no_commit_to_branch: true
+packages:
+- rich==13.5.2

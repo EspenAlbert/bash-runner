@@ -1,18 +1,23 @@
+import logging
 import time
 from json import loads
+from os import getenv
 
 import pytest
-
 from bash_runner import (
-    run_and_wait,
     BashConfig,
     BashError,
-    stop_runs_and_pool,
-    run,
-    kill,
     BashRun,
+    kill,
     print_with_override,
+    run,
+    run_and_wait,
+    stop_runs_and_pool,
 )
+
+running_in_pants = bool(getenv("RUNNING_IN_PANTS", ""))
+pants_skip = pytest.mark.skipif(running_in_pants, reason="pants env incompatible")
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -73,6 +78,7 @@ if current_attempt < 3:
 """
 
 
+@pants_skip
 def test_multiple_attempts(tmp_path):
     """error might look weird due to flushing"""
     script_path = tmp_path / "attempt.py"
@@ -81,6 +87,7 @@ def test_multiple_attempts(tmp_path):
     assert result.clean_complete
 
 
+@pants_skip
 def test_not_enough_attempts(tmp_path):
     script_path = tmp_path / "attempt.py"
     script_path.write_text(_attempt_script)
@@ -90,6 +97,7 @@ def test_not_enough_attempts(tmp_path):
     assert exc.value.exit_code == 1
 
 
+@pants_skip
 def test_multi_attempts_retry_call_false(tmp_path):
     script_path = tmp_path / "attempt.py"
     script_path.write_text(_attempt_script)
@@ -106,6 +114,7 @@ def test_multi_attempts_retry_call_false(tmp_path):
     assert "attempt in script: 1/3" in exc.value.stdout
 
 
+@pants_skip
 def test_multi_attempts_retry_call_true(tmp_path):
     script_path = tmp_path / "attempt.py"
     script_path.write_text(_attempt_script)
@@ -139,7 +148,7 @@ def test_parse_json(tmp_path):
     result = run_and_wait(BashConfig(f"cat {filename}", cwd=tmp_path))
     time.sleep(0.1)
     stdout = result.stdout
-    print(stdout)
+    logger.info(stdout)
     parsed = loads(stdout)
     assert parsed["check"]
     assert parsed["can_I_parse"] == [1, 2, 3]
@@ -154,6 +163,7 @@ print("sleep_done")
 """
 
 
+@pants_skip
 @pytest.mark.parametrize("immediate", [True, False])
 def test_kill_process(tmp_path, immediate):
     filename = "sleeper.py"
@@ -215,6 +225,7 @@ def test_adding_failing_callback_to_bash_run():
     assert flag
 
 
+@pants_skip
 def test_allow_process_to_finish(tmp_path):
     filename = "continue_after_abort.py"
     file_path = tmp_path / filename
@@ -236,6 +247,7 @@ def test_parallel_runs():
     for result in results:
         result.wait_until_complete()
     assert time.time() - start < 4
+
 
 @pytest.mark.parametrize("call_old", [False, True])
 def test_print_with_override(call_old):

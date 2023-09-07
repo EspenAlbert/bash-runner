@@ -1,0 +1,81 @@
+# PANTS_BASE_START
+[GLOBAL]
+pants_version = "2.17.0rc3"
+print_stacktrace = true
+level = "warn"
+build_file_prelude_globs = ["_pants/*.py"]
+backend_packages = [
+  "pants.backend.awslambda.python",
+  "pants.backend.build_files.fmt.black",
+  "pants.backend.codegen.protobuf.python",
+  "pants.backend.docker",
+  "pants.backend.experimental.helm",
+  "pants.backend.experimental.python",
+  "pants.backend.experimental.python.lint.ruff",
+  "pants.backend.python",
+  "pants.backend.python.lint.black",
+  "pants.backend.python.mixed_interpreter_constraints",
+  "pants.backend.python.typecheck.mypy",
+]
+
+[python]
+enable_resolves = true
+interpreter_constraints = ["==3.11.*"]
+
+[python.resolves]
+python-default = "3rdparty/python-default.lock"
+
+[python.resolves_to_interpreter_constraints]
+python-default = ["==3.11.*"]
+
+[black]
+config = "pyproject.toml"
+install_from_resolve = "python-default"
+interpreter_constraints = ["==3.11.*"]
+
+[mypy]
+config = "pyproject.toml"
+install_from_resolve = "python-default"
+interpreter_constraints = ["==3.11.*"]
+
+[coverage-py]
+config = "pyproject.toml"
+install_from_resolve = "python-default"
+interpreter_constraints = ["==3.11.*"]
+requirements = ["coverage[toml]>=6.5,<8"]
+report = ["xml", "html"]
+
+[pytest]
+install_from_resolve = "python-default"
+requirements = [
+  "pytest==6.2.5",
+  "pytest-asyncio==0.15.1",
+  "pytest-cov==3.0.0",
+  "pytest-regressions==2.0.1",
+  "pytest-freezegun==0.4.2",
+  "pytest-html==3.1.1",
+  "pytest-subtests==0.5.0",
+  "xdoctest==0.15.4",
+]
+
+[ruff]
+config = "pyproject.toml"
+install_from_resolve = "python-default"
+interpreter_constraints = ["==3.11.*"]
+args = "--ignore=I001"
+
+[generate-lockfiles]
+diff = true
+
+[test]
+use_coverage = true
+extra_env_vars = ["RUNNING_IN_PANTS=yes"]
+timeout_default = 30
+timeout_maximum = 600
+
+[tailor]
+ignore_adding_targets = ["_pants:_pants", "//:root"]
+
+[source]
+root_patterns = ["3rdparty", "src", "tests"]
+# PANTS_BASE_END

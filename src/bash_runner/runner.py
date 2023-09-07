@@ -1,18 +1,18 @@
 from __future__ import annotations
+
 import atexit
 import logging
 import signal
 import subprocess
-import sys
-from concurrent.futures import ThreadPoolExecutor, Future, wait
+from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from os import getenv, setsid
 from typing import Callable
 
 from bash_runner.colors import ContentType
-from bash_runner.models import BashConfig, BashRun, StartResult, BashError
-from bash_runner.printer import print_with, log_exception
+from bash_runner.models import BashConfig, BashError, BashRun, StartResult
+from bash_runner.printer import log_exception, print_with
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ def _read_until_complete(
     stream = proc.stdout if is_stdout else proc.stderr
     content_type = _STDOUT if is_stdout else _STDERR
     try:
-        for line in iter(stream.readline, ""):
+        for line in iter(stream.readline, ""):  # type: ignore
             result.append(line)
             print_with(
                 line.strip("\n"),
@@ -51,7 +51,7 @@ def _read_until_complete(
 def run(config: BashConfig | str) -> BashRun:
     if isinstance(config, str):
         config = BashConfig(script=config)
-    on_started = Future()
+    on_started = Future()  # type: ignore
     _pool.submit(_execute_run, config, on_started)
     return on_started.result()
 
@@ -85,13 +85,14 @@ def kill_all_runs(
     immediate: bool = False, reason: str = "", abort_timeout: float = 3.0
 ):
     for run in _runs.values():
-        kill(
-            run.p_open,
-            immediate=immediate,
-            reason=reason,
-            abort_timeout=abort_timeout,
-            prefix=run.config.print_prefix,
-        )
+        if p_open := run.p_open:
+            kill(
+                p_open,
+                immediate=immediate,
+                reason=reason,
+                abort_timeout=abort_timeout,
+                prefix=run.config.print_prefix,
+            )
 
 
 def stop_runs_and_pool():
@@ -180,6 +181,7 @@ def _attempt_run(
                 error = BashError(bash_run, base_error=base_error)
                 bash_run._complete(error)
                 raise error from e
+    return bash_run
 
 
 def _run(
@@ -201,7 +203,7 @@ def _run(
     )
     stdout_result: list[str] = []
     stderr_result: list[str] = []
-    with subprocess.Popen(["bash", "-c", script], **kwargs) as proc:
+    with subprocess.Popen(["bash", "-c", script], **kwargs) as proc:  # type: ignore
         process_started(StartResult(proc, stdout_result, stderr_result))
 
         def read_stdout():
@@ -255,8 +257,3 @@ def kill(
         proc.terminate()
     except (OSError, ValueError) as e:
         warn(f"unable to get output when shutting down {e!r}")
-
-
-if __name__ == "__main__":
-    _, *script_args = sys.argv
-    run_and_wait(BashConfig(" ".join(script_args)))

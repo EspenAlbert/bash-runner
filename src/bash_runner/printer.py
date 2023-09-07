@@ -4,12 +4,12 @@ import typing
 from collections import ChainMap
 from contextlib import contextmanager
 from random import randint
-from typing import Protocol, Any
+from typing import Any, Protocol
 
 from rich.console import Console
 from rich.text import Text
 
-from bash_runner.colors import ContentType, EXTRA_COLORS
+from bash_runner.colors import EXTRA_COLORS, ContentType
 
 _DEFAULT_CONTENT_TYPE = ContentType.DEFAULT
 
@@ -110,8 +110,8 @@ def get_color(key: str) -> str:
         _PREFIX_COLOR.clear()
         _PREFIX_COLOR[""] = ""
         options = EXTRA_COLORS
-    options = list(options)
-    color = options[randint(0, len(options) - 1)]
+    options = list(options)  # type: ignore
+    color = options[randint(0, len(options) - 1)]  # type: ignore
     _PREFIX_COLOR[key] = color
     return color
 

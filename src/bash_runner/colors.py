@@ -23,6 +23,7 @@ class ContentType(StrEnum):
     def colors(cls) -> dict[str, str]:
         return {**cls.__colors__}
 
+
 # directly from rich.color
 EXTRA_COLORS: set[str] = {
     "yellow",
@@ -56,4 +57,3 @@ EXTRA_COLORS: set[str] = {
     "orchid",
     "orange3",
 }
-

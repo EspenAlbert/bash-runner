@@ -7,7 +7,7 @@ from concurrent.futures import Future
 from dataclasses import dataclass, field
 from pathlib import Path
 from random import choices
-from typing import Callable, Any, NamedTuple
+from typing import Any, Callable, NamedTuple
 
 from bash_runner.colors import ContentType
 from bash_runner.printer import print_with
@@ -15,6 +15,7 @@ from bash_runner.printer import print_with
 _empty = object()
 string_or_digit = string.ascii_letters + string.digits
 MAX_PREFIX_LEN = 30
+
 
 def always_retry(_):
     return True
@@ -104,6 +105,7 @@ class BashRun:
     def exit_code(self) -> int | None:
         if p_open := self.p_open:
             return p_open.returncode
+        return None
 
     def _complete(self, error: BaseException | None = None):
         if self._complete_flag.done():
