@@ -84,7 +84,7 @@ def run_error(run: BashRun, timeout: float | None = 1) -> BaseException | None:
         return e
 
 
-def wait_safely_on_ok_errors(
+def wait_on_ok_errors(
     *runs: BashRun, timeout: float | None = None, skip_kill_timeouts: bool = False
 ) -> tuple[list[BashRun], list[tuple[BaseException, BashRun]]]:
     future_runs = {run._complete_flag: run for run in runs}

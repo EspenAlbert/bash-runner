@@ -13,7 +13,7 @@ from bash_runner import (
     run,
     run_and_wait,
     stop_runs_and_pool,
-    wait_safely_on_ok_errors,
+    wait_on_ok_errors,
 )
 
 running_in_pants = bool(getenv("RUNNING_IN_PANTS", ""))
@@ -265,6 +265,6 @@ def test_print_with_override(call_old):
 
 def test_wait_safely_on_ok_failures_all_ok():
     runs = [run(f"echo {i}") for i in range(10)]
-    oks, errors = wait_safely_on_ok_errors(*runs, timeout=1)
+    oks, errors = wait_on_ok_errors(*runs, timeout=1)
     assert  not errors
     assert all(run.clean_complete for run in oks)
