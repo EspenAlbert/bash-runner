@@ -11,7 +11,13 @@ from os import getenv, setsid
 from typing import Callable
 
 from bash_runner.colors import ContentType
-from bash_runner.models import BashConfig, BashError, BashRun, StartResult
+from bash_runner.models import (
+    BashConfig,
+    BashError,
+    BashRun,
+    RunIncompleteError,
+    StartResult,
+)
 from bash_runner.printer import log_exception, print_with
 
 logger = logging.getLogger(__name__)
@@ -46,22 +52,67 @@ def _read_until_complete(
             return
         print_with(repr(e), prefix=prefix, content_type=_ERROR)
         log_exception(e)
+    except BaseException as e:
+        log_exception(e)
+
+def _as_config(config: BashConfig | str) -> BashConfig:
+    if isinstance(config, str):
+        return BashConfig(script=config)
+    else:
+        assert isinstance(config, BashConfig), f"not a BashConfig or str: {config!r}"
+    return config
 
 
 def run(config: BashConfig | str) -> BashRun:
-    if isinstance(config, str):
-        config = BashConfig(script=config)
+    config = _as_config(config)
     on_started = Future()  # type: ignore
     _pool.submit(_execute_run, config, on_started)
     return on_started.result()
 
 
 def run_and_wait(config: BashConfig | str) -> BashRun:
-    if isinstance(config, str):
-        config = BashConfig(script=config)
+    config = _as_config(config)
     run = _execute_run(config)
     run.wait_until_complete()
     return run
+
+
+def run_error(run: BashRun, timeout: float | None = 1) -> BaseException | None:
+    try:
+        run._complete_flag.result(timeout=timeout)
+    except BaseException as e:
+        return e
+
+
+def wait_safely_on_ok_errors(
+    *runs: BashRun, timeout: float | None = None, skip_kill_timeouts: bool = False
+) -> tuple[list[BashRun], list[tuple[BaseException, BashRun]]]:
+    future_runs = {run._complete_flag: run for run in runs}
+    done, not_done = wait(
+        [run._complete_flag for run in runs], timeout, return_when="ALL_COMPLETED"
+    )
+    errors: list[tuple[BaseException, BashRun]] = []
+    oks: list[BashRun] = []
+
+    if not_done:
+        if skip_kill_timeouts:
+            errors.extend(
+                (RunIncompleteError(future_runs[run]), future_runs[run])
+                for run in not_done
+            )
+            runs: list[BashRun] = [future_runs[f] for f in done]  # type: ignore
+        else:
+            for run in runs:
+                if run.is_running and (p_open := run.p_open):
+                    prefix = run.config.print_prefix
+                    kill(p_open, immediate=True, reason="timeout", prefix=prefix)
+
+    for run in runs:
+        if error := run_error(run):
+            errors.append((error, run))
+        else:
+            oks.append(run)
+    return oks, errors
 
 
 _runs: dict[int, BashRun] = {}
@@ -147,7 +198,7 @@ class _FutureContext:
 
 def _attempt_run(
     bash_run: BashRun, prefix: str, on_started: Future | None, is_last_attempt: bool
-) -> BashRun:
+) -> BashRun | None:
     config = bash_run.config
     start_future = _FutureContext(bash_run)
 
@@ -181,7 +232,7 @@ def _attempt_run(
                 error = BashError(bash_run, base_error=base_error)
                 bash_run._complete(error)
                 raise error from e
-    return bash_run
+    return None
 
 
 def _run(

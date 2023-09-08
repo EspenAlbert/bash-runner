@@ -8,6 +8,7 @@ from bash_runner.runner import (
     stop_runs_and_pool,
     kill_all_runs,
     kill,
+    wait_safely_on_ok_errors,
 )
 
 __all__ = (
@@ -24,4 +25,5 @@ __all__ = (
     "run",
     "run_and_wait",
     "stop_runs_and_pool",
+    "wait_safely_on_ok_errors",
 )

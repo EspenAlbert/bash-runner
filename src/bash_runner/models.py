@@ -49,7 +49,7 @@ class BashConfig:
     print_prefix: str = _empty  # type: ignore
     extra_popen_kwargs: dict = field(default_factory=dict)
     allow_non_zero_exit: bool = False
-    should_retry: Callable[[BashRun], bool] | None = always_retry
+    should_retry: Callable[[BashRun], bool] = always_retry
     ansi_content: bool = False
 
     def __post_init__(self):
@@ -117,11 +117,11 @@ class BashRun:
             return
         if error or self.exit_code != 0:
             if self.config.allow_non_zero_exit:
-                self._complete_flag.set_result(self.exit_code)
+                self._complete_flag.set_result(self)
             else:
                 self._complete_flag.set_exception(BashError(self, error))
         else:
-            self._complete_flag.set_result(self.exit_code)
+            self._complete_flag.set_result(self)
 
     def _set_start_result(self, start_result: StartResult):
         self.p_open = start_result.p_open
@@ -161,3 +161,8 @@ class BashError(Exception):
     @property
     def stderr(self):
         return self.run.stderr
+
+
+class RunIncompleteError(Exception):
+    def __init__(self, run: BashRun):
+        self.run = run
