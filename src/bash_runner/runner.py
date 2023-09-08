@@ -70,10 +70,10 @@ def run(config: BashConfig | str) -> BashRun:
     return on_started.result()
 
 
-def run_and_wait(config: BashConfig | str) -> BashRun:
+def run_and_wait(config: BashConfig | str, timeout: float | None = None) -> BashRun:
     config = _as_config(config)
     run = _execute_run(config)
-    run.wait_until_complete()
+    run.wait_until_complete(timeout)
     return run
 
 
