@@ -179,8 +179,10 @@ def test_kill_process(tmp_path, immediate):
     started = run(BashConfig(f"{PYTHON_EXEC} {filename}", cwd=tmp_path))
     time.sleep(0.5)
     start = time.monotonic()
+    popen = started.p_open
+    assert popen, "no process to kill"
     kill(
-        started.p_open,
+        popen,
         immediate=immediate,
         reason="test-kill",
         prefix=started.config.print_prefix,
@@ -240,7 +242,9 @@ def test_allow_process_to_finish(tmp_path):
     bash_run = run(BashConfig(f"{PYTHON_EXEC} {filename}", cwd=tmp_path))
     time.sleep(0.5)
     start = time.monotonic()
-    kill(bash_run.p_open, immediate=False, abort_timeout=3)
+    popen = bash_run.p_open
+    assert popen, "no process"
+    kill(popen, immediate=False, abort_timeout=3)
     stdout = bash_run.stdout
     duration = time.monotonic() - start
     assert 1 < duration < 2
