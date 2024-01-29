@@ -55,6 +55,7 @@ def _read_until_complete(
     except BaseException as e:
         log_exception(e)
 
+
 def _as_config(config: BashConfig | str) -> BashConfig:
     if isinstance(config, str):
         return BashConfig(script=config)

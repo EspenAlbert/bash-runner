@@ -1,4 +1,5 @@
 import logging
+import sys
 import time
 from json import loads
 from os import getenv
@@ -16,6 +17,7 @@ from bash_runner import (
     wait_on_ok_errors,
 )
 
+PYTHON_EXEC = sys.executable
 running_in_pants = bool(getenv("RUNNING_IN_PANTS", ""))
 pants_skip = pytest.mark.skipif(running_in_pants, reason="pants env incompatible")
 logger = logging.getLogger(__name__)
@@ -84,7 +86,7 @@ def test_multiple_attempts(tmp_path):
     """error might look weird due to flushing"""
     script_path = tmp_path / "attempt.py"
     script_path.write_text(_attempt_script)
-    result = run_and_wait(BashConfig(script=f"python {script_path}", attempts=3))
+    result = run_and_wait(BashConfig(script=f"{PYTHON_EXEC} {script_path}", attempts=3))
     assert result.clean_complete
 
 
@@ -93,7 +95,7 @@ def test_not_enough_attempts(tmp_path):
     script_path = tmp_path / "attempt.py"
     script_path.write_text(_attempt_script)
     with pytest.raises(BashError) as exc:
-        run_and_wait(BashConfig(script=f"python {script_path}", attempts=2))
+        run_and_wait(BashConfig(script=f"{PYTHON_EXEC} {script_path}", attempts=2))
     assert "attempt in script: 2/3" in exc.value.stdout
     assert exc.value.exit_code == 1
 
@@ -109,7 +111,9 @@ def test_multi_attempts_retry_call_false(tmp_path):
     with pytest.raises(BashError) as exc:
         run_and_wait(
             BashConfig(
-                script=f"python {script_path}", attempts=4, should_retry=never_retry
+                script=f"{PYTHON_EXEC} {script_path}",
+                attempts=4,
+                should_retry=never_retry,
             )
         )
     assert "attempt in script: 1/3" in exc.value.stdout
@@ -125,7 +129,9 @@ def test_multi_attempts_retry_call_true(tmp_path):
 
     result = run_and_wait(
         BashConfig(
-            script=f"python {script_path}", attempts=4, should_retry=retry_if_attempt
+            script=f"{PYTHON_EXEC} {script_path}",
+            attempts=4,
+            should_retry=retry_if_attempt,
         )
     )
     assert "attempt in script: 3/3" in result.stdout
@@ -170,7 +176,7 @@ def test_kill_process(tmp_path, immediate):
     filename = "sleeper.py"
     file_path = tmp_path / filename
     file_path.write_text(_slow_script)
-    started = run(BashConfig(f"python {filename}", cwd=tmp_path))
+    started = run(BashConfig(f"{PYTHON_EXEC} {filename}", cwd=tmp_path))
     time.sleep(0.5)
     start = time.monotonic()
     kill(
@@ -231,7 +237,7 @@ def test_allow_process_to_finish(tmp_path):
     filename = "continue_after_abort.py"
     file_path = tmp_path / filename
     file_path.write_text(_continue_after_abort)
-    bash_run = run(BashConfig(f"python {filename}", cwd=tmp_path))
+    bash_run = run(BashConfig(f"{PYTHON_EXEC} {filename}", cwd=tmp_path))
     time.sleep(0.5)
     start = time.monotonic()
     kill(bash_run.p_open, immediate=False, abort_timeout=3)
@@ -266,5 +272,5 @@ def test_print_with_override(call_old):
 def test_wait_safely_on_ok_failures_all_ok():
     runs = [run(f"echo {i}") for i in range(10)]
     oks, errors = wait_on_ok_errors(*runs, timeout=1)
-    assert  not errors
+    assert not errors
     assert all(run.clean_complete for run in oks)
